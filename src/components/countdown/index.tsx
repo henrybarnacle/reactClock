@@ -1,98 +1,105 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
+import Clock from './Clock';
+import MyToasts from './MyToasts';
 import { Calendar } from 'primereact/calendar';
-// import CalendarDemo from './calendar.js';
+import { Toast } from 'primereact/toast';
 import { StyledCountdown } from './styles';
-import 'primereact/resources/primereact.min.css';
-import 'primeicons/primeicons.css';
 
 // Write your countdown code in this component
 export class Countdown extends React.Component {
-// prime react date picker
-// count down clock that calculates hours : minutes : seconds from date / time added.
-// changing date picker resets clock
-// dark theme green clock / red last 10 seconds, digital clock font
-// animation on zero?
-// email alert for zero?
 
 state = {clock: 0,
          hours: 0,
-         date8: new Date(),
+         dateTime: new Date(),
          days: 0,
          hour: 0,
          minutes: 0,
          seconds: 0,
-         started: false
- }
-
-
-//     let today = new Date();
-//     let month = today.getMonth();
-//     let year = today.getFullYear();
-//     let prevMonth = (month === 0) ? 11 : month - 1;
-//     let prevYear = (prevMonth === 11) ? year - 1 : year;
-//     let nextMonth = (month === 11) ? 0 : month + 1;
-//     let nextYear = (nextMonth === 0) ? year + 1 : year;
-
- //   const [date8, setDate8] = useState(null);
-
-setHours(num: any) {
-    this.setState({hours: num});
+         started: false,
+         success: false,
+         invalidEntry: false
 }
-
-setDate8(val: any) {
-    this.setState({date8: val});
-    let x = val.getTime();
-    let y = new Date().getTime();
-    let n = (x - y) / 1000;
-    this.setState({hours: n});
+setEndTime(val: Date | Date[]): void {
+    this.setState({dateTime: val});
 }
-
-onStart() {
-    this.startClock(this.state.hours);
-    this.setState({started: true});
+getCountTime(): number {
+    const x = this.state.dateTime.getTime();
+    const y = new Date().getTime();
+    return (x - y) / 1000;
 }
-
-startClock(n: number) {
-    let prev = n;
-    let day = Math.floor(n / (24 * 3600));
-
-    n = n % (24 * 3600);
-    let hour = Math.floor(n / 3600);
-
-    n %= 3600;
-    let minute = Math.floor(n / 60);
-
-    n %= 60;
-    let second = Math.floor(n);
-    this.setState({days: day, hour: hour, minutes: minute, seconds: second })
-    if (prev > 1) {
+onStart(): void {
+    const n = this.getCountTime();
+    if (n < 1 ) {
+        this.setState({invalidEntry: 'true'});
         setTimeout(() => {
-            this.startClock(prev - 1);
-        }, 1000);
+            this.setState({invalidEntry: 'false'});
+        }, 500);
     } else {
-    this.setState({hours: this.state.clock});
+        this.setState({hours: n});
+        this.startClock(n);
+    }
+}
+onCancel(): void {
+    this.setState({started: false});
+    this.setEndTime(new Date());
+}
+setCount(n: number): void{
+    const day = Math.floor(n / (24 * 3600));
+    n = n % (24 * 3600);
+    const hour = Math.floor(n / 3600);
+    n %= 3600;
+    const minute = Math.floor(n / 60);
+    n %= 60;
+    const second = Math.floor(n);
+    this.setState({days: day, hour: hour, minutes: minute, seconds: second })
+}
+startClock(n: number): void {
+    if (n > 0) {
+        this.setState({started: true});
+        const prev = n;
+        this.setCount(n);
+        setTimeout(() => {
+            if (prev > 1 && this.state.started) {
+                this.startClock(prev - 1);
+            } else {
+                this.setState({hours: this.state.clock});
+                if (this.state.started) {
+                    this.setState({success: 'true'});
+                    this.setState({success: 'false'});
+                }
+            }
+        }, 1000);
     }
 }
 
 render() {
   return (
     <StyledCountdown className="clock-main">
-      <div>
-{/*           <img src="koala-logo.png" /> */}
-          <div className="p-field p-col-12 p-md-4">
-          <div>
-            <label for="time24">Select End Date / Time</label>
-          </div>
-            <Calendar id="time24" value={this.state.date8} onChange={(e) => this.setDate8(e.value)} showTime showSeconds />
-          </div>
-          <div>{this.state.days} days, {this.state.hour} hours, {this.state.minutes} minutes, {this.state.seconds} seconds</div>
-{/*           <input onChange={event => this.setHours(event.target.value)}></input> */}
-          <button onClick={() => this.onStart()}>Start</button>
-          {this.state.started && (<button onClick={() => this.onCancel()}>Cancel</button>)}
-          <br/>
-{/*             <div className="clock">{this.state.hours}</div> */}
+    <MyToasts success={this.state.success} error={this.state.invalidEntry} />
+      <div className="clock-container">
+         {!this.state.started && (
+              <div className="date-input-container">
+                  <div>
+                    <label htmlFor="time24">Select end date / time</label>
+                  </div>
+                  <div className="date-input">
+                    <Calendar id="time24" value={this.state.dateTime} onChange={(e) => this.setEndTime(e.value)} showTime showSeconds></Calendar>
+                  </div>
+                  <div>
+                    <button className="primary-button" onClick={() => this.onStart()}>Start</button>
+                  </div>
+              </div>
+          )}
+          {this.state.started && (
+               <div>
+                   <div className="container">
+                      <Clock days={this.state.days} hours={this.state.hour}  minutes={this.state.minutes} seconds={this.state.seconds}></Clock>
+                   </div>
+                   <button className="knockout-button" onClick={() => this.onCancel()}>Cancel</button>
+              </div>
+          )}
       </div>
     </StyledCountdown>
   );
